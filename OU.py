@@ -87,6 +87,19 @@ class OU(PKEnc):
         C = (((pk['g'] % pk['n']) ** m) * ((pk['h'] % pk['n']) ** r)) % pk['n']  # g^m * h^r % n
         return ciphertext(C)
 
+    def encryptWithNeg(self, pk, sk, m):
+        neg = False
+        if m < 0:
+            m *= -1
+            neg = True
+
+        C = self.encrypt(pk, m)
+
+        if neg:
+            C *= int(sk['p']) - 1
+
+        return C
+
     def decrypt(self, pk, sk, cipher):
         p = sk['p']
         C = cipher.getText()
@@ -96,7 +109,11 @@ class OU(PKEnc):
 
         a = L(pow(C % (p ** 2), p - 1, p ** 2)) % p
         b = L(pow(pk['g'] % (p ** 2), p - 1, p ** 2)) % p
-        m = (a / b) % p
-        return toInt(m)
+        m = int((a / b) % p)
+
+        if m > (p / 2):
+            m -= p/2
+
+        return m
 
 
