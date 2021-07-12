@@ -10,8 +10,8 @@ class OUIntegerGroup:
 
     def setParam(self, p, q):
         if isPrime(p) and isPrime(q):
-            self.p = integer(p)
-            self.q = integer(q)
+            self.p = p
+            self.q = q
             self.n = (self.p ** 2) * self.q
             return True
         else:
@@ -58,8 +58,12 @@ class ciphertext():
     # [[a * m]] = [[m]]^a
     # 'other' has to be plaintext value
     def __mul__(self, other):
-        if type(other) == int:
+        if type(other) == int or type(other) == integer:
             return ciphertext(self.c ** other)
+
+    def __sub__(self, other):
+        if type(other) == ciphertext:
+            return ciphertext(self.c * (other.c ** -1))
 
     # return encrypted text
     def getText(self):
@@ -83,7 +87,7 @@ class OU(PKEnc):
         return pk, sk
 
     def encrypt(self, pk, m):
-        r = self.group.random()
+        r = self.group.random(pk['n'])
         C = (((pk['g'] % pk['n']) ** m) * ((pk['h'] % pk['n']) ** r)) % pk['n']  # g^m * h^r % n
         return ciphertext(C)
 
@@ -96,7 +100,7 @@ class OU(PKEnc):
         C = self.encrypt(pk, m)
 
         if neg:
-            C *= int(sk['p']) - 1
+            C *= toInt(sk['p']) - 1
 
         return C
 
@@ -105,13 +109,19 @@ class OU(PKEnc):
         C = cipher.getText()
 
         def L(x):
-            return (integer(x) - 1) / p
+            x = toInt(x) - 1
+            if x != 0:
+                return x / p
+            else:
+                return 0
 
         a = L(pow(C % (p ** 2), p - 1, p ** 2)) % p
+        if a == 0:
+            return 0
         b = L(pow(pk['g'] % (p ** 2), p - 1, p ** 2)) % p
-        m = int((a / b) % p)
+        m = toInt((a / b) % p)
 
-        if m > (p / 2):
+        if m > (int(p) // 2):
             m -= p/2
 
         return m
