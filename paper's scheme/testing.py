@@ -1,14 +1,15 @@
 import sys
-from MCS import *
-from OU import OU, OUIntegerGroup
-from datetime import datetime
+# from MCS import *
+import socket
+from utils import *
+
 
 #
 # msg = 5
 # msg2 = -1000
 #
 # group = OUIntegerGroup()
-#
+
 # ou = OU(group)
 #
 # pk, sk = ou.keygen(bitLength=512)
@@ -26,7 +27,7 @@ from datetime import datetime
 # decrypted = ou.decrypt(pk, sk, msg_cipher)
 # end = datetime.now()
 # print("Decryption:", end-start)
-#
+# #
 # add_decrypt = ou.decrypt(pk, sk, cipher_add)
 # mul_decrypt = ou.decrypt(pk, sk, cipher_mul)
 # print("Add: ", add_decrypt)
@@ -41,4 +42,4 @@ from datetime import datetime
 # n = Node(25, 0)
 # print(sys.getsizeof(n))
 
-print(CoveringNodes((0,6), (3,0)))
+print(splitBits(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 32))

@@ -44,16 +44,24 @@ class OUIntegerGroup:
         else:
             return random(max)
 
+    def serialize(self, object):
+        assert type(object) == integer, "cannot serialize non-integer types"
+        return serialize(object)
+
+    def deserialize(self, bytes_object):
+        assert type(bytes_object) == bytes, "cannot deserialize object"
+        return deserialize(bytes_object)
+
 
 # class to contain encrypted text and override operators
-class ciphertext():
+class ciphertext:
     def __init__(self, c):
         self.c = c
 
     # [[m + n]] = [[m]] * [[n]]
     def __add__(self, other):
         if type(other) == ciphertext:
-            return ciphertext(self.c * other.c)
+            return ciphertext(self.c * other.getText())
 
     # [[a * m]] = [[m]]^a
     # 'other' has to be plaintext value
@@ -63,11 +71,50 @@ class ciphertext():
 
     def __sub__(self, other):
         if type(other) == ciphertext:
-            return ciphertext(self.c * (other.c ** -1))
+            return ciphertext(self.c * (other.getText() ** -1))
+
+    # def __eq__(self, other):
+    #     if type(other) == ciphertext:
+    #         return self.c == other.getText()
+    #
+    # def __ne__(self, other):
+    #     if type(other) == ciphertext:
+    #         return self.c != other.getText()
+    #
+    # def __gt__(self, other):
+    #     if type(other) == ciphertext:
+    #         return self.c > other.getText()
+    #
+    # def __ge__(self, other):
+    #     if type(other) == ciphertext:
+    #         return self.c >= other.getText()
+    #
+    # def __lt__(self, other):
+    #     if type(other) == ciphertext:
+    #         return self.c < other.getText()
+    #
+    # def __le__(self, other):
+    #     if type(other) == ciphertext:
+    #         return self.c <= other.getText()
+
+    def __getstate__(self):
+        out = self.__dict__.copy()
+        out['c'] = serialize(out['c'])
+        return out
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.c = deserialize(self.c)
 
     # return encrypted text
     def getText(self):
         return self.c
+
+    # def serialize(self):
+    #     return serialize(self.c)
+    #
+    # def deserialize(self):
+    #     return deserialize(self.c)
 
 
 # Okamoto-Uchiyama cryptosystem
@@ -81,12 +128,13 @@ class OU(PKEnc):
         g = self.group.randomGen()
         h = pow(g % n, n, n)  # g^n % n
 
-        pk = {'n': n, 'g': g, 'h': h, 'l': bitLength}
+        pk = {'n': int(n), 'g': int(g), 'h': int(h), 'l': bitLength}
         sk = {'p': p, 'q': q}
 
         return pk, sk
 
     def encrypt(self, pk, m):
+        pk = {'n': integer(pk['n']), 'g': integer(pk['g']), 'h': integer(pk['h']), 'l': integer(pk['l'])}
         r = self.group.random(pk['n'])
         C = (((pk['g'] % pk['n']) ** m) * ((pk['h'] % pk['n']) ** r)) % pk['n']  # g^m * h^r % n
         return ciphertext(C)
@@ -105,6 +153,7 @@ class OU(PKEnc):
         return C
 
     def decrypt(self, pk, sk, cipher):
+        pk = {'n': integer(pk['n']), 'g': integer(pk['g']), 'h': integer(pk['h']), 'l': integer(pk['l'])}
         p = sk['p']
         C = cipher.getText()
 
