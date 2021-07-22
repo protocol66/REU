@@ -12,7 +12,7 @@ def setup(group):
     assert g2.initPP(), "ERROR: Failed to init pre-computation table for g2."
 
     v = 34
-    S = np.array([group.random(ZR) for _ in range(v)])
+    S = np.array([secrets.randbelow(2) for _ in range(v)])
     N1 = randMatrix(v, v, group)
     N2 = randMatrix(v, v, group)
 
@@ -46,11 +46,16 @@ def encryption(params, base_enc_key, AE, group, g1):
     A2 = np.array(A2)
 
     # TODO: change df to numpy
-    P1 = P2 = np.empty((params.shape[0], params.shape[1]))
+    P1 = np.empty((params.shape[0], params.shape[1]))
+    P2 = np.empty((params.shape[0], params.shape[1]))
     for r in range(params.shape[0]):
         for z in range(params.shape[1]):
             if S[z] == 0:
-                P1[r][z] = secrets.randbelow(params.iat[r, z] * (10 ** 6)) / (10 ** 6)
+                x = int(params.iat[r, z])
+                if x != 0:
+                    P1[r][z] = secrets.randbelow(abs(x))
+                else:
+                    P1[r][z] = 0
                 P2[r][z] = params.iat[r, z] - P1[r][z]
             else:
                 P1[r][z] = P2[r][z] = params.iat[r, z]
@@ -61,9 +66,12 @@ def encryption(params, base_enc_key, AE, group, g1):
     X2 = np.linalg.inv(sum(A2))
 
     enc_key = (X1 * N1_inv, X2 * N2_inv)
-    ciphertext = np.empty(6)
+    ciphertext = []
     for i in range(params.shape[0]):
-        ciphertext[i] = (g1 ** alpha, g1 ** (alpha * P1[i] * X1 * N1_inv), g1 ** (alpha * P2[i] * X2 * N2_inv))
+        ciphertext.append((g1 ** alpha,
+                           [[g1 ** (int(alpha) * P1[i] @ X1 @ N1_inv)[j] for j in range(params.shape[0])]],
+                           [[g1 ** (int(alpha) * P2[i] @ X2 @ N2_inv)[j] for j in range(params.shape[0])]]))
+    ciphertext = np.array(ciphertext)
 
     return enc_key, ciphertext
 
@@ -73,6 +81,7 @@ group = PairingGroup('MNT159')
 g1, g2, ek, dk, AE, AD = setup(group)
 
 params = pd.read_csv('../params.csv').drop(['b_i'], 1)
+params = params * (10 ** 6)
 encryption(params, ek, AE, group, g1)
 
 
