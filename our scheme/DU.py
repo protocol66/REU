@@ -1,7 +1,8 @@
 import numpy as np
-import pandas as pd
 import secrets
-from charm.toolbox.pairinggroup import PairingGroup, ZR, G1, G2
+import socket
+from charm.toolbox.pairinggroup import ZR, PairingGroup
+from utils import send, recv
 
 
 def encryption(params, base_dec_key, AD, group, g2):
@@ -19,11 +20,9 @@ def encryption(params, base_dec_key, AD, group, g2):
     Y1 = sum(MA1)
     Y2 = sum(MA2)
 
-    params = params.to_numpy()
-
-    q1 = np.empty(params.size)
-    q2 = np.empty(params.size)
-    for z in range(params.size):
+    q1 = np.empty(len(params))
+    q2 = np.empty(len(params))
+    for z in range(len(params)):
         if S[z] == 1:
             x = int(params[z])
             if x != 0:
@@ -37,7 +36,45 @@ def encryption(params, base_dec_key, AD, group, g2):
     beta = group.random(ZR)
 
     ciphertext = (g2 ** beta,
-                  [[g2 ** (beta * q1 @ NM1 @ Y1)[i] for i in range(len(q1))]],
-                  [[g2 ** (beta * q2 @ NM2 @ Y2)[i] for i in range(len(q2))]])
+                  [g2 ** int((int(beta) * q1 @ NM1 @ Y1)[i]) for i in range(len(q1))],
+                  [g2 ** int((int(beta) * q2 @ NM2 @ Y2)[i]) for i in range(len(q2))])
 
     return ciphertext
+
+
+DO_PORT = 2000
+MCS_PORT = 2001
+DU_PORT = 2002
+
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+s.bind((socket.gethostname(), DU_PORT))
+s.listen(5)
+
+print("receiving group")
+group_name = recv(s)
+group = PairingGroup(group_name)
+print("receiving g2")
+g2 = group.deserialize(recv(s))
+print("receiving key")
+base_description_key = recv(s)
+print("receiving AD")
+AD = recv(s)
+
+patient_data = [2, 2, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 1, 0, 55]  # first row of dataset
+# patient_data = [2,1,2,3,1,3,0,3,0,0,0,1,0,0,0,1,2,0,2,0,0,0,0,0,2,0,2,3,2,0,0,2,3,26]
+
+CT2 = encryption(patient_data, base_description_key, AD, group, g2)
+
+
+gb, gq1, gq2 = CT2
+gq1 = [group.serialize(i) for i in gq1]
+gq2 = [group.serialize(i) for i in gq2]
+CT2_serialized = (group.serialize(gb), gq1, gq2)
+
+signal = recv(s)
+print("sending CT2")
+send(CT2_serialized, MCS_PORT)
+
+

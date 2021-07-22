@@ -32,7 +32,7 @@ def Encrypted_LSB(pk, sk):
 
 def SecureComparing(b, pk, sk):
     print(f"b is {b}")
-    b_segments = splitBits(b, 32)
+    b_segments = split_bits(b, 32)
     b_segments_cipher = [ou.encrypt(pk, i) for i in b_segments]
     # b_segments = [ciphertext(i) for i in b_segments]
     print("sending segments")

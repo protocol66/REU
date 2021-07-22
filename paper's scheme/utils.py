@@ -1,7 +1,5 @@
 import socket
 import pickle
-import numpy as np
-from charm.toolbox.pairinggroup import ZR
 
 
 # node is a tuple (h, o)
@@ -37,7 +35,7 @@ def CoveringNodes(node, root):
     return [node] + CoveringNodes(parent, root)
 
 
-def splitBits(value, n):
+def split_bits(value, n):
     ''' Split `value` into a list of `n`-bit integers '''
     value = int(value)
     original = value
@@ -73,7 +71,3 @@ def recv(s, size=1024):
     # data = client.recv(size)
     client.detach()
     return data
-
-
-def randMatrix(row, col, group):
-    return np.array([[float(int(group.random(ZR))) for _ in range(col)] for _ in range(row)])
